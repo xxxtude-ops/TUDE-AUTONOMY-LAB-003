@@ -65,3 +65,5 @@ jobs:
             evidence/verification.json
           retention-days: 14
           if-no-files-found: error
+
+# Lab 003 validation: second distinct hosted run must resume checkpoint from run 1.
