@@ -1,0 +1,37 @@
+{
+  "schema": "tude.public-fixtures.v1",
+  "records": [
+    {
+      "id": "planet-01",
+      "text": "Mercury"
+    },
+    {
+      "id": "planet-02",
+      "text": "Venus"
+    },
+    {
+      "id": "planet-03",
+      "text": "Earth"
+    },
+    {
+      "id": "planet-04",
+      "text": "Mars"
+    },
+    {
+      "id": "planet-05",
+      "text": "Jupiter"
+    },
+    {
+      "id": "planet-06",
+      "text": "Saturn"
+    },
+    {
+      "id": "planet-07",
+      "text": "Uranus"
+    },
+    {
+      "id": "planet-08",
+      "text": "Neptune"
+    }
+  ]
+}
