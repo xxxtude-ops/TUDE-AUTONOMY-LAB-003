@@ -1,0 +1,67 @@
+name: TUDE Research Autonomy Lab 003
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/lab003.yml'
+  schedule:
+    - cron: '23 8,20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tude-lab-003
+  cancel-in-progress: false
+
+jobs:
+  public-read-only-continuity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout fixed workflow code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Locate checkpoint from prior hosted execution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 scripts/runner.py --discover
+      - name: Restore, verify, and advance checkpoint
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == "1" ]] || { echo "HOLD_RERUN_ATTEMPT"; exit 1; }
+          status="$(python3 -c 'import json;print(json.load(open("history.json"))["status"])')"
+          mkdir -p evidence
+          if [[ "$status" == "BOOTSTRAP" ]]; then
+            python3 scripts/runner.py --produce --bootstrap
+            python3 scripts/independent_verify.py --receipt evidence/receipt.json --output evidence/verification.json
+          elif [[ "$status" == "RESUME" ]]; then
+            parent="$(python3 -c 'import json;print(json.load(open("history.json"))["parent_run_id"])')"
+            mkdir -p previous
+            gh run download "$parent" --repo "$GITHUB_REPOSITORY" --name tude-checkpoint --dir previous
+            test -s previous/receipt.json
+            python3 scripts/independent_verify.py --receipt previous/receipt.json
+            python3 scripts/runner.py --produce --parent-file previous/receipt.json --parent-id "$parent"
+            python3 scripts/independent_verify.py --receipt evidence/receipt.json --previous previous/receipt.json --parent-id "$parent" --output evidence/verification.json
+          else
+            echo "HOLD_UNEXPECTED_HISTORY" >&2
+            exit 1
+          fi
+          python3 -c 'import json; assert json.load(open("evidence/verification.json"))["result"] == "PASS"'
+      - name: Publish verified checkpoint artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tude-checkpoint
+          path: |
+            evidence/receipt.json
+            evidence/verification.json
+          retention-days: 14
+          if-no-files-found: error
